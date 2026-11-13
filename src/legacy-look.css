@@ -1,0 +1,191 @@
+:root {
+  color: #e9f0fc;
+  background: #0a1120;
+}
+
+body {
+  background:
+    radial-gradient(ellipse at 45% -25%, #162a49 0, transparent 45%),
+    #0a1120;
+}
+
+.app-shell {
+  max-width: 1440px;
+  padding: 0 0 30px;
+}
+
+.app-shell > header {
+  height: 76px;
+  padding: 0 max(22px, 4vw);
+  border-bottom: 1px solid #25334b;
+  background: #0d1729;
+}
+
+.brand {
+  color: #fff;
+  letter-spacing: .08em;
+}
+
+.brand span {
+  color: #4985fb;
+}
+
+.user {
+  color: #dbe7fa;
+}
+
+.user .connection {
+  color: #9fb1cc;
+}
+
+.eventbar {
+  padding: 35px 34px 22px;
+}
+
+.eventbar h1 span {
+  color: #528aff;
+}
+
+.eyebrow {
+  color: #78a8ff;
+}
+
+.secure,
+.tag {
+  color: #a9c8ff;
+  background: #1b2d48;
+  border-color: #2c4264;
+  letter-spacing: .04em;
+}
+
+.card {
+  color: #e9f0fc;
+  background: #142239;
+  border-color: #293c59;
+  border-radius: 18px;
+  box-shadow: none;
+}
+
+.status-card,
+.grid {
+  margin-left: 34px;
+  margin-right: 34px;
+}
+
+.status-card {
+  border-color: #2d405d;
+}
+
+.muted {
+  color: #9dafc8;
+}
+
+button.primary {
+  background: #2866e1;
+}
+
+button.primary:hover {
+  background: #3977ee;
+}
+
+button.secondary {
+  color: #d5e5ff;
+  background: #203b60;
+  border: 1px solid #40649a;
+}
+
+button.danger {
+  background: #582936;
+}
+
+.recipient {
+  background: #1c2c45;
+  border-color: #3c5274;
+}
+
+.recipient small,
+.request small,
+.roster-row small {
+  color: #94a9c9;
+}
+
+.recipient input {
+  accent-color: #558af6;
+}
+
+.permission {
+  color: #ffca84;
+  background: #342817;
+}
+
+.permission.allowed {
+  color: #d5ffed;
+  background: #1e4c3d;
+}
+
+.dot.online {
+  background: #48d29a;
+  box-shadow: 0 0 10px #48d29a70;
+}
+
+.app-shell > footer {
+  color: #8296b6;
+  border-top: 1px solid #1e2d44;
+  padding: 20px;
+  margin-top: 32px;
+}
+
+.login {
+  background:
+    radial-gradient(ellipse at 45% -15%, #1c2b3e 0, transparent 42%),
+    #0a1120;
+}
+
+.login-card {
+  background: #142239;
+  border-color: #2d405d;
+  border-radius: 20px;
+  box-shadow: 0 20px 60px #0005;
+}
+
+.login-card input,
+.login-card select {
+  background: #1c2c45;
+  border-color: #3c5274;
+}
+
+.login-card input:focus,
+.login-card select:focus {
+  outline: 2px solid #81aaff;
+  outline-offset: 2px;
+}
+
+.login footer {
+  color: #8296b6;
+}
+
+.alert {
+  margin-left: 34px;
+  margin-right: 34px;
+  background: #342817;
+  border-color: #594020;
+  color: #e5cda8;
+}
+
+@media (max-width: 700px) {
+  .app-shell > header {
+    height: 66px;
+    padding: 0 15px;
+  }
+
+  .eventbar {
+    padding: 24px 16px 16px;
+  }
+
+  .status-card,
+  .grid,
+  .alert {
+    margin-left: 14px;
+    margin-right: 14px;
+  }
+}
