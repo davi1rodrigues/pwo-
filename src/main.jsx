@@ -1,6 +1,7 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { createRoot } from 'react-dom/client';
 import { Room, RoomEvent, Track } from 'livekit-client';
+import { OBSWebSocket } from 'obs-websocket-js';
 import './style.css';
 import './legacy-look.css';
 
@@ -26,7 +27,9 @@ function App() {
   const [connected, setConnected] = useState(false);
   const [micOn, setMicOn] = useState(false);
   const [state, setState] = useState({ routing: people.map(p=>p.id), requests: [], participants: [] });
+  const [obsState, setObsState] = useState({ status:'disconnected', address:'ws://127.0.0.1:4455', password:'', scenes:[], programScene:'', streaming:false, recording:false, studioMode:false, error:'' });
   const roomRef = useRef(null);
+  const obsRef = useRef(null);
   const attached = useRef(new Set());
   const isDirector = session?.role === 'director';
   const me = session?.role;
@@ -90,6 +93,37 @@ function App() {
   };
   const requestSpeak = async () => { try { await api('requests',session.appToken,{}); await refresh(); } catch(e) { setError(e.message); } };
   const closeRequest = async (id) => { try { await api(`requests/${encodeURIComponent(id)}/close`,session.appToken,{}); await refresh(); } catch(e) { setError(e.message); } };
+  const disconnectObs = () => { obsRef.current?.disconnect(); obsRef.current=null; setObsState(s=>({...s,status:'disconnected',password:'',scenes:[],programScene:'',streaming:false,recording:false,studioMode:false})); };
+  const connectObs = async (event) => {
+    event.preventDefault();
+    setObsState(s=>({...s,status:'connecting',error:''}));
+    const obs = new OBSWebSocket();
+    obsRef.current=obs;
+    obs.on('ConnectionClosed',()=>{ if(obsRef.current===obs){obsRef.current=null;setObsState(s=>({...s,status:'disconnected',password:'',scenes:[],programScene:'',streaming:false,recording:false,studioMode:false}));} });
+    try {
+      await obs.connect(obsState.address.trim() || 'ws://127.0.0.1:4455',obsState.password || undefined);
+      const [sceneData,streamData,recordData,studioData]=await Promise.all([obs.call('GetSceneList'),obs.call('GetStreamStatus'),obs.call('GetRecordStatus'),obs.call('GetStudioModeEnabled')]);
+      if(obsRef.current!==obs) return;
+      setObsState(s=>({...s,status:'connected',password:'',scenes:sceneData.scenes||[],programScene:sceneData.currentProgramSceneName||'',streaming:!!streamData.outputActive,recording:!!recordData.outputActive,studioMode:!!studioData.studioModeEnabled,error:''}));
+    } catch(e) {
+      if(obsRef.current===obs) { obsRef.current=null; obs.disconnect(); setObsState(s=>({...s,status:'disconnected',password:'',error:`Não foi possível conectar ao OBS: ${e.message}`})); }
+    }
+  };
+  const obsCall = async (requestType, requestData={}) => {
+    if(!obsRef.current) return;
+    try { return await obsRef.current.call(requestType,requestData); }
+    catch(e) { setObsState(s=>({...s,error:`O OBS recusou o comando: ${e.message}`})); return null; }
+  };
+  useEffect(()=>{
+    const obs=obsRef.current;
+    if(!obs) return;
+    const scene=e=>setObsState(s=>({...s,programScene:e.sceneName}));
+    const stream=e=>setObsState(s=>({...s,streaming:e.outputActive}));
+    const record=e=>setObsState(s=>({...s,recording:e.outputActive}));
+    obs.on('CurrentProgramSceneChanged',scene); obs.on('StreamStateChanged',stream); obs.on('RecordStateChanged',record);
+    return ()=>{obs.off('CurrentProgramSceneChanged',scene);obs.off('StreamStateChanged',stream);obs.off('RecordStateChanged',record);};
+  },[obsState.status]);
+  useEffect(()=>()=>{obsRef.current?.disconnect();},[]);
 
   if (!session) return <main className="login"><div className="brand">PWO <span>INTERCOM</span></div><section className="card login-card"><p className="eyebrow">EQUIPE DE TRANSMISSÃO</p><h1>Entrar na sala</h1><p className="muted">Acesso por perfil para comunicação privada.</p><form onSubmit={login}><label>Seu perfil<select value={profile} onChange={e=>setProfile(e.target.value)}>{profiles.map(p=><option key={p.id} value={p.id}>{p.label}</option>)}</select></label><label>Código de acesso<input value={code} onChange={e=>setCode(e.target.value)} type="password" autoComplete="current-password" required placeholder="Informe seu código"/></label><button className="primary full" disabled={busy}>{busy?'Conectando…':'Conectar'}</button></form>{error&&<p className="error">{error}</p>}<p className="hint">Use um código individual fornecido pela produção.</p></section><footer>Áudio privado da equipe • OBS não conectado</footer></main>;
 
@@ -97,6 +131,10 @@ function App() {
     <div className="eventbar"><div><p className="eyebrow">CANAL DE OPERAÇÃO</p><h1>Fórmula Truck <span>•</span> Intercom</h1></div><span className="secure">ÁUDIO PRIVADO</span></div>
     {error&&<div className="alert" role="alert">{error}<button onClick={()=>setError('')}>Fechar</button></div>}
     <section className="card status-card"><div><p className="eyebrow">SUA CONEXÃO</p><strong className={`state-line`}><span className={`dot ${connected?'online':''}`}></span>{connected?'Conectado ao intercom':'Estabelecendo conexão…'}</strong><p className="muted">Mantenha esta página aberta e o celular desbloqueado durante a cobertura.</p></div><div className="actions"><button disabled={!connected} className={micOn?'danger':'primary'} onClick={toggleMic}>{micOn?'Desligar microfone':'Ligar microfone'}</button>{!isDirector&&me!=='producer'&&<button className="secondary" onClick={requestSpeak}>Solicitar fala</button>}</div></section>
+    {isDirector&&<section className="card obs-card"><div className="section-head"><div><p className="eyebrow">CONTROLE DA TRANSMISSÃO</p><h2>OBS Studio</h2></div><span className={`tag ${obsState.status==='connected'?'obs-online':''}`}><span className={`dot ${obsState.status==='connected'?'online':''}`}></span> {obsState.status==='connected'?'CONECTADO':obsState.status==='connecting'?'CONECTANDO…':'DESCONECTADO'}</span></div>
+      {obsState.status!=='connected'?<form className="obs-connect" onSubmit={connectObs}><label>Endereço do OBS<input value={obsState.address} onChange={e=>setObsState(s=>({...s,address:e.target.value}))} placeholder="ws://127.0.0.1:4455" autoComplete="url"/></label><label>Senha do WebSocket<input type="password" value={obsState.password} onChange={e=>setObsState(s=>({...s,password:e.target.value}))} autoComplete="new-password" placeholder="Senha configurada no OBS"/></label><button className="primary" disabled={obsState.status==='connecting'}>{obsState.status==='connecting'?'Conectando…':'Conectar ao OBS'}</button></form>:<><div className="obs-status-grid"><div><small>TRANSMISSÃO</small><b className={obsState.streaming?'obs-active':''}>{obsState.streaming?'AO VIVO':'PARADA'}</b></div><div><small>GRAVAÇÃO</small><b className={obsState.recording?'obs-active':''}>{obsState.recording?'GRAVANDO':'PARADA'}</b></div><div><small>CENA NO AR</small><b>{obsState.programScene||'—'}</b></div><div><small>MODO ESTÚDIO</small><b>{obsState.studioMode?'ATIVADO':'DESATIVADO'}</b></div></div><div className="obs-controls"><label>Trocar cena no ar<select value={obsState.programScene} onChange={async e=>{await obsCall('SetCurrentProgramScene',{sceneName:e.target.value});setObsState(s=>({...s,programScene:e.target.value}));}}>{obsState.scenes.map(x=><option key={x.sceneUuid||x.sceneName} value={x.sceneName}>{x.sceneName}</option>)}</select></label><div className="actions"><button className={obsState.streaming?'danger small':'secondary small'} onClick={async()=>{if(!window.confirm(obsState.streaming?'Parar a transmissão ao vivo no OBS?':'Iniciar a transmissão ao vivo no OBS?'))return;const r=await obsCall(obsState.streaming?'StopStream':'StartStream');if(r!==null){const d=await obsCall('GetStreamStatus');if(d)setObsState(s=>({...s,streaming:!!d.outputActive}));}}}>{obsState.streaming?'Encerrar live':'Iniciar live'}</button><button className={obsState.recording?'danger small':'secondary small'} onClick={async()=>{if(!window.confirm(obsState.recording?'Parar a gravação no OBS?':'Iniciar gravação no OBS?'))return;const r=await obsCall(obsState.recording?'StopRecord':'StartRecord');if(r!==null){const d=await obsCall('GetRecordStatus');if(d)setObsState(s=>({...s,recording:!!d.outputActive}));}}}>{obsState.recording?'Parar gravação':'Gravar'}</button><button className="quiet" onClick={disconnectObs}>Desconectar</button></div></div></>}
+      {obsState.error&&<p className="error">{obsState.error}</p>}<p className="hint">Conexão direta e local do navegador ao OBS. A senha só é usada nesta sessão. Controle de cena e transmissão não altera fontes nem envia o intercom ao áudio do programa.</p>
+    </section>}
     {isDirector?<div className="grid"><section className="card"><div className="section-head"><div><p className="eyebrow">COMUNICAÇÃO</p><h2>Quem recebe sua voz</h2></div><span className="tag">Selecione um ou mais</span></div><div className="recipient-list">{people.map(p=><label className="recipient" key={p.id}><div><b>{p.label}</b><small>{roster.get(p.id)?.connected?'Online':'Aguardando conexão'}</small></div><input type="checkbox" checked={state.routing.includes(p.id)} onChange={e=>setRecipient(p.id,e.target.checked)}/></label>)}</div><p className="hint">A seleção limita pelo servidor quais celulares recebem o áudio do diretor.</p></section>
     <section className="card"><div className="section-head"><div><p className="eyebrow">AUTORIZAÇÃO</p><h2>Fala dos entrevistadores</h2></div><span className="tag">A direção controla</span></div><div className="recipient-list">{people.filter(p=>p.id!=='producer').map(p=>{const member=roster.get(p.id);return <div className="recipient" key={p.id}><div><b>{p.label}</b><small>{member?.connected?(member.canPublish?'Pode falar':'Somente escuta'):'Offline'}</small></div><button className={member?.canPublish?'danger small':'secondary small'} disabled={!member?.connected} onClick={()=>grant(p.id,!member?.canPublish)}>{member?.canPublish?'Encerrar fala':'Autorizar fala'}</button></div>})}</div><p className="hint">A permissão é aplicada pelo servidor LiveKit. Ao entrar, entrevistadores ficam sem permissão para publicar áudio.</p></section>
     <section className="card requests-card"><div className="section-head"><div><p className="eyebrow">PEDIDOS DA EQUIPE</p><h2>Solicitações de fala</h2></div></div>{state.requests.filter(r=>r.status==='pending').length===0?<p className="muted empty">Nenhuma solicitação pendente.</p>:state.requests.filter(r=>r.status==='pending').map(r=><div className="request" key={r.id}><div><b>{r.name}</b><small>Solicitou a palavra</small></div><div className="actions"><button className="primary small" onClick={()=>grant(r.identity,true)}>Autorizar</button><button className="quiet" onClick={()=>closeRequest(r.id)}>Dispensar</button></div></div>)}</section></div>

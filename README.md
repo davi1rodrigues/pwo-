@@ -1,6 +1,6 @@
 # PWO Intercom — MVP WebRTC
 
-Aplicação web para direção, dois entrevistadores e produção. O áudio da equipe trafega por uma sala LiveKit; não há ligação com o OBS nesta versão.
+Aplicação web para direção, dois entrevistadores e produção. O áudio da equipe trafega por uma sala LiveKit. A tela da direção também pode controlar uma instância local do OBS Studio via obs-websocket.
 
 ## O que já está implementado
 
@@ -11,8 +11,20 @@ Aplicação web para direção, dois entrevistadores e produção. O áudio da e
 - Solicitação de fala, presença, reconexão e estado da autorização.
 - Microfone com cancelamento de eco, redução de ruído e ganho automático do navegador.
 - Credencial de acesso LiveKit com validade curta. A chave secreta LiveKit fica somente no servidor.
+- Painel opcional do OBS: conexão, estado da live/gravação, cena atual, troca de cena e comandos de iniciar/parar.
 
-O retorno do programa do OBS, mix-minus, gravação, controle de cenas e operação com tela bloqueada não fazem parte do MVP. A aplicação não captura nem envia o áudio do OBS.
+O retorno de áudio do programa, mix-minus, controle de cenas em preview e operação com tela bloqueada não fazem parte do MVP. A aplicação não captura nem envia o áudio do OBS.
+
+## Conectar o OBS Studio
+
+1. No computador que executa o OBS, abra **Ferramentas → Configurações do servidor WebSocket** (em algumas versões, **Ferramentas → WebSocket Server Settings**).
+2. Ative o servidor e mantenha-o acessível somente no próprio computador (endereço local `127.0.0.1`, porta padrão `4455`). Defina uma senha forte e não a compartilhe.
+3. Abra o PWO no navegador desse mesmo computador, entre como Diretor e use o cartão **OBS Studio**. Informe `ws://127.0.0.1:4455` e a senha do OBS.
+4. O cartão mostra o estado da transmissão e gravação e a cena no ar. A lista permite trocar a cena do programa; os botões para iniciar/parar transmissão ou gravação pedem confirmação.
+
+O navegador conversa diretamente com o OBS, sem enviar a senha ao servidor PWO. Portanto, o OBS precisa estar no mesmo computador em que o diretor abriu o painel. Para controle remoto a partir de outro aparelho ou de uma instalação hospedada, é necessário um conector local seguro (WSS) no computador do OBS; não exponha a porta 4455 à internet nem encaminhe essa porta no roteador. A senha é mantida apenas na memória da página enquanto a sessão estiver aberta.
+
+O painel de OBS não altera dispositivos de áudio, fontes, filtros, monitoramento ou mixagem. Configure o OBS para não monitorar a saída de áudio do intercom e use fone fechado. Isso preserva o canal privado da equipe fora do áudio transmitido.
 
 ## Pré-requisitos
 
