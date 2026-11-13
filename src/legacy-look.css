@@ -216,3 +216,5 @@ button.danger {
 .video-tile>span{position:absolute;left:10px;bottom:9px;padding:5px 8px;border-radius:6px;background:#0009;color:white;font-size:.75rem}
 @media(max-width:900px){.director-workspace{grid-template-columns:1fr}.director-sidebar{position:static;display:flex;overflow-x:auto;align-items:center;padding:8px}.director-sidebar .eyebrow{display:none}.director-sidebar button{width:auto;white-space:nowrap}.director-panel{min-width:0}}
 @media(max-width:700px){.director-workspace{margin:0 14px;gap:10px}.director-sidebar{margin:0}.volume-list.compact,.video-recipients{grid-template-columns:1fr}.volume-row{grid-template-columns:1fr;gap:8px}.video-controls{grid-template-columns:1fr}.video-controls>*{width:100%}.director-mic{align-items:flex-start;flex-direction:column}.director-mic button{width:100%}}
+
+.app-shell>header{width:100vw;margin-left:calc(50% - 50vw)}
