@@ -26,6 +26,7 @@ const members = {
 const audience = ['interviewer1','interviewer2','producer'];
 const interviewers = ['interviewer1','interviewer2'];
 let routing = audience;
+let videoRouting = audience;
 let requests = [];
 const appliedSubscriptions = new Map();
 const appDir = path.dirname(fileURLToPath(import.meta.url));
@@ -61,11 +62,15 @@ const directorOnly = (req, res, next) => req.user?.role === 'director' ? next() 
 async function reconcileSubscriptions(participants) {
   const active = new Set(participants.map((p) => p.identity));
   for (const identity of appliedSubscriptions.keys()) if (!active.has(identity)) appliedSubscriptions.delete(identity);
-  const tracks = participants.flatMap((p) => (p.tracks || []).filter((t) => t.sid && (t.type === 0 || String(t.type).toLowerCase() === 'audio')).map((t) => ({ sid: t.sid, owner: p.identity })));
+  const tracks = participants.flatMap((p) => (p.tracks || []).filter((t) => {
+    const kind = String(t.type).toLowerCase();
+    return t.sid && (t.type === 0 || kind === 'audio' || t.type === 1 || kind === 'video');
+  }).map((t) => ({ sid: t.sid, owner: p.identity, kind: (t.type === 0 || String(t.type).toLowerCase() === 'audio') ? 'audio' : 'video' })));
   for (const recipient of participants) {
     const desired = tracks.filter((t) => {
       if (t.owner === recipient.identity) return false;
-      if (t.owner === 'director') return recipient.identity === 'director' || routing.includes(recipient.identity);
+      if (t.owner === 'director') return t.kind === 'audio' ? routing.includes(recipient.identity) : videoRouting.includes(recipient.identity);
+      if (t.kind !== 'audio') return false;
       return recipient.identity === 'director' || (recipient.identity !== 'producer' && t.owner !== 'producer');
     }).map((t) => t.sid);
     const previous = appliedSubscriptions.get(recipient.identity) || new Set();
@@ -100,7 +105,7 @@ app.get('/api/state', auth, async (req, res) => {
     await reconcileSubscriptions(live);
     participants = live.map((p) => ({ identity: p.identity, name: p.name, connected: true, canPublish: p.permission?.canPublish ?? false }));
   } catch (e) { if (!String(e?.message).toLowerCase().includes('not found')) console.warn('Roster indisponível:', e.message); }
-  res.json({ routing, requests, participants, role: req.user.role });
+  res.json({ routing, videoRouting, requests, participants, role: req.user.role });
 });
 
 app.post('/api/requests', auth, (req, res) => {
@@ -118,6 +123,14 @@ app.post('/api/routing', auth, directorOnly, async (req, res) => {
   routing = [...new Set(recipients)];
   try { await reconcileSubscriptions(await roomService.listParticipants(roomName)); } catch (e) { console.warn('Áudio ainda não roteado:', e.message); }
   res.json({ routing });
+});
+
+app.post('/api/video-routing', auth, directorOnly, async (req, res) => {
+  const recipients = req.body?.recipients;
+  if (!Array.isArray(recipients) || recipients.some((r) => !audience.includes(r))) return res.status(400).json({ error: 'Destinatários inválidos.' });
+  videoRouting = [...new Set(recipients)];
+  try { await reconcileSubscriptions(await roomService.listParticipants(roomName)); } catch (e) { console.warn('Vídeo ainda não roteado:', e.message); }
+  res.json({ videoRouting });
 });
 
 app.post('/api/permission', auth, directorOnly, async (req, res) => {

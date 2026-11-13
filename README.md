@@ -11,9 +11,12 @@ Aplicação web para direção, dois entrevistadores e produção. O áudio da e
 - Solicitação de fala, presença, reconexão e estado da autorização.
 - Microfone com cancelamento de eco, redução de ruído e ganho automático do navegador.
 - Credencial de acesso LiveKit com validade curta. A chave secreta LiveKit fica somente no servidor.
+- Painel de Direção com abas Geral, OBS Studio, Volumes de retorno e Fala.
+- Volume de retorno ajustável por entrevistador e produção, somente no aparelho do Diretor.
+- Retorno de vídeo do OBS via Câmera Virtual, publicado no LiveKit em 640×360 a 15 fps e roteado somente aos destinatários escolhidos.
 - Painel opcional do OBS: conexão, estado da live/gravação, cena atual, troca de cena e comandos de iniciar/parar.
 
-O retorno de áudio do programa, mix-minus, controle de cenas em preview e operação com tela bloqueada não fazem parte do MVP. A aplicação não captura nem envia o áudio do OBS.
+O retorno de vídeo do programa usa a Câmera Virtual do OBS. O PWO não captura nem envia o áudio do OBS. Retorno de áudio, mix-minus, controle de cenas em preview e operação com tela bloqueada ficam para fase posterior.
 
 ## Conectar o OBS Studio
 
@@ -25,6 +28,15 @@ O retorno de áudio do programa, mix-minus, controle de cenas em preview e opera
 O navegador conversa diretamente com o OBS, sem enviar a senha ao servidor PWO. Portanto, o OBS precisa estar no mesmo computador em que o diretor abriu o painel. Para controle remoto a partir de outro aparelho ou de uma instalação hospedada, é necessário um conector local seguro (WSS) no computador do OBS; não exponha a porta 4455 à internet nem encaminhe essa porta no roteador. A senha é mantida apenas na memória da página enquanto a sessão estiver aberta.
 
 O painel de OBS não altera dispositivos de áudio, fontes, filtros, monitoramento ou mixagem. Configure o OBS para não monitorar a saída de áudio do intercom e use fone fechado. Isso preserva o canal privado da equipe fora do áudio transmitido.
+
+## Retorno de vídeo para a equipe
+
+1. No OBS, clique em **Iniciar Câmera Virtual** e configure a saída para **Programa**. A saída Preview pode revelar mudanças de cena antes de irem ao ar.
+2. Na aba **Geral** do Diretor, clique em **Buscar fontes de vídeo** e autorize a câmera no navegador.
+3. Escolha **OBS Virtual Camera**, selecione os participantes que recebem o retorno e clique em **Iniciar retorno de vídeo**.
+4. Os demais perfis verão o retorno na tela do PWO. O botão pode desligar o envio a qualquer momento.
+
+O navegador do Diretor deve estar no mesmo computador do OBS e na sala LiveKit. O vídeo é publicado com qualidade reduzida para poupar rede e bateria. A seleção de destinatários e volumes é mantida em memória durante a execução do servidor. Faça o ensaio com a transmissão privada antes de usar ao vivo.
 
 ## Pré-requisitos
 
