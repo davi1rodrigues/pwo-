@@ -189,3 +189,4 @@ button.danger {
     margin-right: 14px;
   }
 }
+.brand{display:flex;align-items:center;gap:10px}.brand-mark{width:58px;height:58px;object-fit:contain;mix-blend-mode:screen;flex:none}.login>.brand{gap:12px}.login .brand-mark{width:76px;height:76px}.app-shell>.brand-mark{width:54px;height:54px}@media(max-width:700px){.brand{gap:7px}.brand-mark{width:48px;height:48px}.login .brand-mark{width:64px;height:64px}}
