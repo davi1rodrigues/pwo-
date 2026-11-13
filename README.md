@@ -14,9 +14,11 @@ Aplicação web para direção, dois entrevistadores e produção. O áudio da e
 - Painel de Direção com abas Geral, OBS Studio, Volumes de retorno e Fala.
 - Volume de retorno ajustável por entrevistador e produção, somente no aparelho do Diretor.
 - Retorno de vídeo do OBS via Câmera Virtual, publicado no LiveKit em 640×360 a 15 fps e roteado somente aos destinatários escolhidos.
+- Retorno do áudio do programa por uma faixa LiveKit separada, com seleção de entrada do cabo virtual e destinatários próprios.
+- Volume independente para o áudio do programa nos celulares e monitor local opcional para o Diretor.
 - Painel opcional do OBS: conexão, estado da live/gravação, cena atual, troca de cena e comandos de iniciar/parar.
 
-O retorno de vídeo do programa usa a Câmera Virtual do OBS. O PWO não captura nem envia o áudio do OBS. Retorno de áudio, mix-minus, controle de cenas em preview e operação com tela bloqueada ficam para fase posterior.
+O retorno de vídeo do programa usa a Câmera Virtual do OBS. O retorno de áudio exige um cabo virtual instalado no computador do Diretor. Mix-minus, controle de cenas em preview e operação com tela bloqueada ficam para fase posterior.
 
 ## Conectar o OBS Studio
 
@@ -28,6 +30,14 @@ O retorno de vídeo do programa usa a Câmera Virtual do OBS. O PWO não captura
 O navegador conversa diretamente com o OBS, sem enviar a senha ao servidor PWO. Portanto, o OBS precisa estar no mesmo computador em que o diretor abriu o painel. Para controle remoto a partir de outro aparelho ou de uma instalação hospedada, é necessário um conector local seguro (WSS) no computador do OBS; não exponha a porta 4455 à internet nem encaminhe essa porta no roteador. A senha é mantida apenas na memória da página enquanto a sessão estiver aberta.
 
 O painel de OBS não altera dispositivos de áudio, fontes, filtros, monitoramento ou mixagem. Configure o OBS para não monitorar a saída de áudio do intercom e use fone fechado. Isso preserva o canal privado da equipe fora do áudio transmitido.
+
+## Retorno de áudio do programa para a equipe
+
+No computador do Diretor, instale um cabo virtual (por exemplo, VB-CABLE da VB-Audio). Em **Configurações → Áudio → Avançado** do OBS, escolha **CABLE Input** como dispositivo de monitoramento. Em **Propriedades avançadas de áudio**, marque **Monitorar e enviar para a saída** apenas nas fontes que devem chegar ao PWO. Assim elas continuam indo à live e também ao cabo virtual. Consulte o [tutorial do OBS para chamadas de vídeo](https://obsproject.com/kb/video-call-streaming-tutorial/) e a [documentação de fontes de áudio](https://obsproject.com/kb/audio-sources).
+
+No PWO, abra a aba **OBS Studio**, clique em **Buscar fontes de áudio**, permita o acesso ao microfone e selecione **CABLE Output**. O OBS envia o som a CABLE Input e o navegador recebe pela entrada CABLE Output. Marque os participantes e inicie **Retorno de áudio**. O áudio é publicado em uma faixa LiveKit separada do microfone do Diretor. Cada participante tem um controle de volume próprio para esse retorno.
+
+O Diretor pode ativar **Ouvir o retorno neste computador**. Use fones. Se o OBS captura o áudio do computador/desktop, mantenha esse monitor desligado para evitar que o retorno volte para a live. Não monitore o intercom pelo OBS. O PWO não altera a mixagem e não cria mix-minus automaticamente.
 
 ## Retorno de vídeo para a equipe
 
@@ -71,10 +81,11 @@ Faça o ensaio completo em condições parecidas com a pista, com diretor, os do
 2. Verifique que o entrevistador não transmite antes da autorização.
 3. Peça fala pelo celular, autorize no perfil de direção, confirme áudio em ambas as direções e encerre a autorização.
 4. Selecione cada destinatário e confira que só os escolhidos ouvem a direção.
-5. Teste fone KZ, microfone correto, volume, troca entre Wi-Fi e dados móveis, tela ligada, reconexão e bateria por um período longo.
-6. Faça uma transmissão simulada completa. Mantenha Mumble ou outro intercom já conhecido como plano reserva até o MVP passar o ensaio.
+5. Teste o retorno do programa pelo cabo virtual e confira em um celular com fone que o som não volta para a live.
+6. Teste fone KZ, microfone correto, volume, troca entre Wi-Fi e dados móveis, tela ligada, reconexão e bateria por um período longo.
+7. Faça uma transmissão simulada completa. Mantenha Mumble ou outro intercom já conhecido como plano reserva até o MVP passar o ensaio.
 
-O áudio do intercom chega como reprodução privada no próprio aparelho. Não faça loopback/monitoramento desse áudio para uma entrada do OBS. Use fone fechado e teste com o OBS transmitindo para confirmar que o áudio privado da equipe não aparece no programa. O retorno OBS/mix-minus fica para fase posterior.
+O áudio do intercom e o retorno do programa são faixas separadas. Não faça loopback/monitoramento do intercom para uma entrada do OBS. Use fone fechado e teste com o OBS transmitindo para confirmar que o áudio privado da equipe não aparece no programa.
 
 ## Limites operacionais
 
