@@ -65,6 +65,14 @@ O navegador do Diretor deve estar no mesmo computador do OBS e na sala LiveKit. 
 
 O terminal inicia o servidor da aplicação na porta 3000 e o Vite na 5173. O navegador encaminha chamadas da API ao servidor local.
 
+## App desktop para Windows
+
+Para abrir o PWO em uma janela própria, execute `npm run desktop` na pasta do projeto. O comando prepara a interface e abre o app sem uma aba do Chrome. A janela desativada em segundo plano não reduz a atividade de áudio/vídeo e o app solicita ao Windows que mantenha o computador acordado enquanto estiver aberto. O botão **Sair** na interface encerra a sessão; fechar a janela encerra o app.
+
+Para gerar o instalador Windows, execute `npm run desktop:package`. O arquivo será criado na pasta `release`. As credenciais não são empacotadas: no primeiro uso instalado, o app copia o `.env` de `Documents\pwo` para a pasta privada de configuração do usuário, se ele existir. Caso contrário, cria um modelo nessa pasta e pede que você preencha as credenciais. Mantenha esse arquivo privado.
+
+O app desktop inicia a API local em `127.0.0.1`. Para os celulares da equipe entrarem pela internet, a API também precisa estar publicada em um endereço HTTPS acessível a eles (ou por um túnel HTTPS durante ensaios). O app desktop sozinho não hospeda a sala para os celulares. A conexão com a internet e o LiveKit ainda é necessária.
+
 ## Implantar para teste externo
 
 Uma opção simples é executar o `Dockerfile` em um serviço HTTPS (por exemplo, Render, Railway ou uma VPS com proxy TLS). Configure estas variáveis no painel do serviço, sem incluí-las no código ou no repositório:

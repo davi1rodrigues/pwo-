@@ -31,11 +31,13 @@ let audioReturnRouting = audience;
 let requests = [];
 const appliedSubscriptions = new Map();
 const appDir = path.dirname(fileURLToPath(import.meta.url));
+const host = process.env.HOST || '0.0.0.0';
 
 app.use(helmet({ contentSecurityPolicy: false, crossOriginEmbedderPolicy: false }));
 app.use(express.json({ limit: '16kb' }));
 app.use('/api', rateLimit({ windowMs: 60_000, limit: 300, standardHeaders: true, legacyHeaders: false }));
 app.use('/api/session', rateLimit({ windowMs: 60_000, limit: 10, standardHeaders: true, legacyHeaders: false }));
+app.get('/api/health', (_req, res) => res.json({ ok: true, app: 'PWO Intercom', production: process.env.NODE_ENV === 'production' }));
 app.use((req, res, next) => {
   const origin = req.headers.origin;
   const allowed = (process.env.ALLOWED_ORIGIN || '').split(',').map((s) => s.trim()).filter(Boolean);
@@ -164,4 +166,4 @@ if (process.env.NODE_ENV === 'production') {
   app.use(express.static(dist));
   app.get('*', (req, res) => res.sendFile(path.join(dist, 'index.html')));
 }
-app.listen(port, '0.0.0.0', () => console.log(`PWO Intercom ativo na porta ${port}.`));
+export const httpServer = app.listen(port, host, () => console.log(`PWO Intercom ativo em ${host}:${port}.`));

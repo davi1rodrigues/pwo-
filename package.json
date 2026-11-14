@@ -1,6 +1,10 @@
 {
   "name": "pwo-intercom",
   "version": "1.0.0",
+  "description": "PWO team intercom desktop and web application",
+  "author": "PWO",
+  "productName": "PWO Intercom",
+  "main": "electron-main.mjs",
   "private": true,
   "type": "module",
   "scripts": {
@@ -8,7 +12,10 @@
     "dev:web": "vite --host 0.0.0.0",
     "dev:server": "node server/index.js",
     "build": "vite build",
-    "start": "node server/index.js"
+    "start": "node server/index.js",
+    "desktop": "npm run build && electron electron-main.mjs",
+    "desktop:open": "electron electron-main.mjs",
+    "desktop:package": "npm run build && electron-builder --win nsis"
   },
   "dependencies": {
     "concurrently": "^9.2.0",
@@ -23,6 +30,37 @@
     "react": "^19.1.1",
     "react-dom": "^19.1.1",
     "vite": "^7.1.4"
+  },
+  "devDependencies": {
+    "electron": "^39.0.0",
+    "electron-builder": "^26.0.12"
+  },
+  "build": {
+    "appId": "com.podpwo.intercom",
+    "productName": "PWO Intercom",
+    "directories": {
+      "output": "release"
+    },
+    "files": [
+      "electron-main.mjs",
+      "server/**/*",
+      "dist/**/*",
+      "public/**/*",
+      ".env.example",
+      "package.json",
+      "node_modules/**/*"
+    ],
+    "win": {
+      "target": "nsis",
+      "artifactName": "PWO-Intercom-Setup-${version}.${ext}"
+    },
+    "nsis": {
+      "oneClick": false,
+      "perMachine": false,
+      "allowToChangeInstallationDirectory": true,
+      "createDesktopShortcut": true,
+      "createStartMenuShortcut": true
+    }
   },
   "allowScripts": {
     "esbuild@0.28.2": true
