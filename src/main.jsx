@@ -1,5 +1,6 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { createRoot } from 'react-dom/client';
+import { Capacitor } from '@capacitor/core';
 import { Room, RoomEvent, Track, createLocalAudioTrack } from 'livekit-client';
 import { OBSWebSocket } from 'obs-websocket-js';
 import './style.css';
@@ -13,7 +14,9 @@ const people = [
 ];
 const profiles = [{id:'director', label:'Diretor'}, ...people];
 const api = async (path, token, body) => {
-  const response = await fetch(`/api/${path}`, { method: body ? 'POST' : 'GET', headers: { ...(token ? { Authorization: `Bearer ${token}` } : {}), ...(body ? { 'Content-Type':'application/json' } : {}) }, body: body ? JSON.stringify(body) : undefined });
+  const apiBase = (import.meta.env.VITE_API_BASE_URL || localStorage.getItem('pwoApiBaseUrl') || '').replace(/\/+$/, '');
+  const endpoint = apiBase ? `${apiBase}/api/${path}` : `/api/${path}`;
+  const response = await fetch(endpoint, { method: body ? 'POST' : 'GET', headers: { ...(token ? { Authorization: `Bearer ${token}` } : {}), ...(body ? { 'Content-Type':'application/json' } : {}) }, body: body ? JSON.stringify(body) : undefined });
   const data = await response.json().catch(() => ({}));
   if (!response.ok) throw new Error(data.error || 'Falha de comunicação com o servidor.');
   return data;
@@ -30,7 +33,9 @@ function VideoTile({ track, name, muted=false }) {
 }
 
 function App() {
+  const isNativeApp = Capacitor.isNativePlatform();
   const [session, setSession] = useState(null);
+  const [apiBase, setApiBase] = useState(() => localStorage.getItem('pwoApiBaseUrl') || import.meta.env.VITE_API_BASE_URL || '');
   const [profile, setProfile] = useState('director');
   const [code, setCode] = useState('');
   const [error, setError] = useState('');
@@ -108,7 +113,14 @@ function App() {
 
   const login = async (e) => {
     e.preventDefault(); setBusy(true); setError('');
-    try { const data = await api('session', null, { role: profile, code }); setSession(data); setCode(''); }
+    try {
+      if (isNativeApp) {
+        const normalized = apiBase.trim().replace(/\/+$/, '');
+        if (!/^https:\/\//i.test(normalized)) throw new Error('Informe o endereço HTTPS seguro do servidor PWO.');
+        localStorage.setItem('pwoApiBaseUrl', normalized);
+      }
+      const data = await api('session', null, { role: profile, code }); setSession(data); setCode('');
+    }
     catch (e) { setError(e.message); }
     finally { setBusy(false); }
   };
@@ -272,7 +284,7 @@ function App() {
   useEffect(()=>()=>{obsRef.current?.disconnect();},[]);
 
 
-  if (!session) return <main className="login"><div className="brand"><img className="brand-mark" src="/logo-pwo.png" alt="Pod PWO Podcast" /> PWO <span>INTERCOM</span></div><section className="card login-card"><p className="eyebrow">EQUIPE DE TRANSMISSÃO</p><h1>Entrar na sala</h1><p className="muted">Acesso por perfil para comunicação privada.</p><form onSubmit={login}><label>Seu perfil<select value={profile} onChange={e=>setProfile(e.target.value)}>{profiles.map(p=><option key={p.id} value={p.id}>{p.label}</option>)}</select></label><label>Código de acesso<input value={code} onChange={e=>setCode(e.target.value)} type="password" autoComplete="current-password" required placeholder="Informe seu código"/></label><button className="primary full" disabled={busy}>{busy?'Conectando…':'Conectar'}</button></form>{error&&<p className="error">{error}</p>}<p className="hint">Use um código individual fornecido pela produção.</p></section><footer>Áudio privado da equipe • OBS não conectado</footer></main>;
+  if (!session) return <main className="login"><div className="brand"><img className="brand-mark" src="/logo-pwo.png" alt="Pod PWO Podcast" /> PWO <span>INTERCOM</span></div><section className="card login-card"><p className="eyebrow">EQUIPE DE TRANSMISSÃO</p><h1>Entrar na sala</h1><p className="muted">Acesso por perfil para comunicação privada.</p><form onSubmit={login}>{isNativeApp&&<label>Endereço seguro do servidor PWO<input type="url" value={apiBase} onChange={e=>setApiBase(e.target.value)} required placeholder="https://intercom.seudominio.com" autoComplete="url"/></label>}<label>Seu perfil<select value={profile} onChange={e=>setProfile(e.target.value)}>{profiles.map(p=><option key={p.id} value={p.id}>{p.label}</option>)}</select></label><label>Código de acesso<input value={code} onChange={e=>setCode(e.target.value)} type="password" autoComplete="current-password" required placeholder="Informe seu código"/></label><button className="primary full" disabled={busy}>{busy?'Conectando…':'Conectar'}</button></form>{error&&<p className="error">{error}</p>}<p className="hint">{isNativeApp?'A produção precisa fornecer o endereço HTTPS do servidor.':'Use um código individual fornecido pela produção.'}</p></section><footer>Áudio privado da equipe • OBS não conectado</footer></main>;
 
   const obsPanel = <section className="card obs-card"><div className="section-head"><div><p className="eyebrow">CONTROLE DA TRANSMISSÃO</p><h2>OBS Studio</h2></div><span className={'tag ' + (obsState.status==='connected'?'obs-online':'')}><span className={'dot ' + (obsState.status==='connected'?'online':'')}></span> {obsState.status==='connected'?'CONECTADO':obsState.status==='connecting'?'CONECTANDO…':'DESCONECTADO'}</span></div>
     {obsState.status!=='connected'?<form className="obs-connect" onSubmit={connectObs}><label>Endereço do OBS<input value={obsState.address} onChange={e=>setObsState(s=>({...s,address:e.target.value}))} placeholder="ws://127.0.0.1:4455" autoComplete="url"/></label><label>Senha do WebSocket<input type="password" value={obsState.password} onChange={e=>setObsState(s=>({...s,password:e.target.value}))} autoComplete="new-password" placeholder="Senha configurada no OBS"/></label><button className="primary" disabled={obsState.status==='connecting'}>{obsState.status==='connecting'?'Conectando…':'Conectar ao OBS'}</button></form>:<><div className="obs-status-grid"><div><small>TRANSMISSÃO</small><b className={obsState.streaming?'obs-active':''}>{obsState.streaming?'AO VIVO':'PARADA'}</b></div><div><small>GRAVAÇÃO</small><b className={obsState.recording?'obs-active':''}>{obsState.recording?'GRAVANDO':'PARADA'}</b></div><div><small>CENA NO AR</small><b>{obsState.programScene||'—'}</b></div><div><small>MODO ESTÚDIO</small><b>{obsState.studioMode?'ATIVADO':'DESATIVADO'}</b></div></div><div className="obs-controls"><label>Trocar cena no ar<select value={obsState.programScene} onChange={async e=>{await obsCall('SetCurrentProgramScene',{sceneName:e.target.value});setObsState(s=>({...s,programScene:e.target.value}));}}>{obsState.scenes.map(x=><option key={x.sceneUuid||x.sceneName} value={x.sceneName}>{x.sceneName}</option>)}</select></label><div className="actions"><button className={obsState.streaming?'danger small':'secondary small'} onClick={async()=>{if(!window.confirm(obsState.streaming?'Parar a transmissão ao vivo no OBS?':'Iniciar a transmissão ao vivo no OBS?'))return;const r=await obsCall(obsState.streaming?'StopStream':'StartStream');if(r!==null){const d=await obsCall('GetStreamStatus');if(d)setObsState(s=>({...s,streaming:!!d.outputActive}));}}}>{obsState.streaming?'Encerrar live':'Iniciar live'}</button><button className={obsState.recording?'danger small':'secondary small'} onClick={async()=>{if(!window.confirm(obsState.recording?'Parar a gravação no OBS?':'Iniciar gravação no OBS?'))return;const r=await obsCall(obsState.recording?'StopRecord':'StartRecord');if(r!==null){const d=await obsCall('GetRecordStatus');if(d)setObsState(s=>({...s,recording:!!d.outputActive}));}}}>{obsState.recording?'Parar gravação':'Gravar'}</button><button className="quiet" onClick={disconnectObs}>Desconectar</button></div></div></>}

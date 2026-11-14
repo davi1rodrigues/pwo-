@@ -15,7 +15,10 @@
     "start": "node server/index.js",
     "desktop": "npm run build && electron electron-main.mjs",
     "desktop:open": "electron electron-main.mjs",
-    "desktop:package": "npm run build && electron-builder --win nsis"
+    "desktop:package": "npm run build && electron-builder --win nsis",
+    "mobile:sync": "npm run build && cap sync android",
+    "mobile:apk": "npm run mobile:sync && cd android && gradlew.bat assembleDebug",
+    "mobile:open": "cap open android"
   },
   "dependencies": {
     "concurrently": "^9.2.0",
@@ -32,6 +35,10 @@
     "vite": "^7.1.4"
   },
   "devDependencies": {
+    "@capacitor/android": "^8.6.2",
+    "@capacitor/assets": "^4.0.0",
+    "@capacitor/cli": "^8.6.2",
+    "@capacitor/core": "^8.6.2",
     "electron": "^39.0.0",
     "electron-builder": "^26.0.12"
   },
@@ -52,7 +59,8 @@
     ],
     "win": {
       "target": "nsis",
-      "artifactName": "PWO-Intercom-Setup-${version}.${ext}"
+      "artifactName": "PWO-Intercom-Setup-${version}.${ext}",
+      "icon": "assets/icon.ico"
     },
     "nsis": {
       "oneClick": false,

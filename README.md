@@ -73,6 +73,14 @@ Para gerar o instalador Windows, execute `npm run desktop:package`. O arquivo se
 
 O instalador inicia sua própria API local em `127.0.0.1:3010`, sem depender do servidor do VS Code. Para celulares da equipe entrarem pela internet, a API ainda precisa estar disponível em HTTPS (por hospedagem ou túnel apontado para a porta 3010 durante ensaios). O app desktop sozinho não hospeda a sala para os celulares. A conexão com a internet e o LiveKit ainda é necessária.
 
+## App Android (APK)
+
+O projeto Android usa a mesma interface e a logo do PWO. Para gerar um APK de instalação e atualizar os arquivos Android após mudanças na interface, execute `npm run mobile:apk`. O arquivo de teste aparece em `android/app/build/outputs/apk/debug/app-debug.apk`. No Android, permita a instalação para o app usado para abrir o APK e autorize microfone/câmera quando o PWO pedir. O APK de depuração serve para ensaios e instalação direta; publicação na Play Store exige assinatura de lançamento.
+
+Na primeira tela, informe o endereço HTTPS público da API do PWO, depois escolha seu perfil e use o código fornecido pela produção. O endereço fica guardado somente no aparelho. O APK não inclui chaves LiveKit nem códigos de equipe. **O GitHub Pages não é a API**: para entrar na sala, a produção precisa publicar o servidor Node do PWO em HTTPS (por exemplo, em uma hospedagem ou túnel para ensaio), configurar os segredos LiveKit no servidor e compartilhar o endereço com a equipe. Uma instância única deve atender todos os celulares.
+
+O app Android é indicado para os entrevistadores e produção. Controles locais do OBS e a câmera virtual do OBS continuam no computador Diretor; o retorno visual do programa deve ser enviado pelo OBS do computador.
+
 ## Implantar para teste externo
 
 Uma opção simples é executar o `Dockerfile` em um serviço HTTPS (por exemplo, Render, Railway ou uma VPS com proxy TLS). Configure estas variáveis no painel do serviço, sem incluí-las no código ou no repositório:

@@ -41,7 +41,7 @@ app.get('/api/health', (_req, res) => res.json({ ok: true, app: 'PWO Intercom', 
 app.use((req, res, next) => {
   const origin = req.headers.origin;
   const allowed = (process.env.ALLOWED_ORIGIN || '').split(',').map((s) => s.trim()).filter(Boolean);
-  if (origin && (allowed.includes(origin) || (process.env.NODE_ENV !== 'production' && /^https?:\/\/(localhost|127\.0\.0\.1)(:\d+)?$/.test(origin)))) {
+  if (origin && (allowed.includes(origin) || origin === 'https://localhost' || origin === 'capacitor://localhost' || (process.env.NODE_ENV !== 'production' && /^https?:\/\/(localhost|127\.0\.0\.1)(:\d+)?$/.test(origin)))) {
     res.setHeader('Access-Control-Allow-Origin', origin);
     res.setHeader('Vary', 'Origin');
     res.setHeader('Access-Control-Allow-Headers', 'Content-Type, Authorization');
