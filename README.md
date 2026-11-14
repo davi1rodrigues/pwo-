@@ -71,7 +71,7 @@ Para abrir o PWO em uma janela própria, execute `npm run desktop` na pasta do p
 
 Para gerar o instalador Windows, execute `npm run desktop:package`. O arquivo será criado na pasta `release`. As credenciais não são empacotadas: no primeiro uso instalado, o app copia o `.env` de `Documents\pwo` para a pasta privada de configuração do usuário, se ele existir. Caso contrário, cria um modelo nessa pasta e pede que você preencha as credenciais. Mantenha esse arquivo privado.
 
-O app desktop inicia a API local em `127.0.0.1`. Para os celulares da equipe entrarem pela internet, a API também precisa estar publicada em um endereço HTTPS acessível a eles (ou por um túnel HTTPS durante ensaios). O app desktop sozinho não hospeda a sala para os celulares. A conexão com a internet e o LiveKit ainda é necessária.
+O instalador inicia sua própria API local em `127.0.0.1:3010`, sem depender do servidor do VS Code. Para celulares da equipe entrarem pela internet, a API ainda precisa estar disponível em HTTPS (por hospedagem ou túnel apontado para a porta 3010 durante ensaios). O app desktop sozinho não hospeda a sala para os celulares. A conexão com a internet e o LiveKit ainda é necessária.
 
 ## Implantar para teste externo
 

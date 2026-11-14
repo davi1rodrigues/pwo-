@@ -47,11 +47,11 @@ async function prepareLocalServer() {
   }
 
   dotenv.config({ path: configPath, override: false });
-  const basePort = Number(process.env.PORT || '3000');
+  const basePort = Number(app.isPackaged ? (process.env.PWO_DESKTOP_PORT || '3010') : (process.env.PORT || '3000'));
   const baseUrl = `http://127.0.0.1:${basePort}`;
 
   if (await waitForApi(baseUrl, 900, true)) return baseUrl;
-  if (await waitForApi('http://127.0.0.1:5173', 900)) return 'http://127.0.0.1:5173';
+  if (!app.isPackaged && await waitForApi('http://127.0.0.1:5173', 900)) return 'http://127.0.0.1:5173';
 
   const required = ['LIVEKIT_URL', 'LIVEKIT_API_KEY', 'LIVEKIT_API_SECRET', 'APP_JWT_SECRET', 'DIRECTOR_CODE', 'INTERVIEWER1_CODE', 'INTERVIEWER2_CODE', 'PRODUCER_CODE'];
   const placeholder = /your-project|replace-me|replace-with/i;
