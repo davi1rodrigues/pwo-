@@ -42,6 +42,7 @@ function App() {
   const [busy, setBusy] = useState(false);
   const [connected, setConnected] = useState(false);
   const [micOn, setMicOn] = useState(false);
+  const [micBusy, setMicBusy] = useState(false);
   const [state, setState] = useState({ routing: people.map(p=>p.id), videoRouting: people.map(p=>p.id), audioReturnRouting: people.map(p=>p.id), requests: [], participants: [] });
   const [directorTab, setDirectorTab] = useState('general');
   const [volumeValues, setVolumeValues] = useState({ interviewer1:1, interviewer2:1, producer:1 });
@@ -59,6 +60,7 @@ function App() {
   const [monitorAudioReturn, setMonitorAudioReturn] = useState(false);
   const [obsState, setObsState] = useState({ status:'disconnected', address:'ws://127.0.0.1:4455', password:'', scenes:[], programScene:'', streaming:false, recording:false, studioMode:false, error:'' });
   const roomRef = useRef(null);
+  const micBusyRef = useRef(false);
   const obsRef = useRef(null);
   const attached = useRef(new Set());
   const audioReturnTrackRef = useRef(null);
@@ -87,7 +89,8 @@ function App() {
     const onTrack = (track, publication, participant) => {
       if (participant.identity === me) return;
       if (track.kind === Track.Kind.Video) {
-        setRemoteVideoTracks(items => [...items.filter(item => item.track !== track), { identity:participant.identity, name:participant.name, track }]);
+        const key = `${participant.identity}:${publication.trackSid || track.sid}`;
+        setRemoteVideoTracks(items => [...items.filter(item => item.identity !== participant.identity && item.key !== key), { key, identity:participant.identity, name:participant.name, track }]);
         return;
       }
       if (track.kind !== Track.Kind.Audio) return;
@@ -99,16 +102,37 @@ function App() {
     };
     const onUntrack = (track) => {
       track.detach().forEach(el=>{ attached.current.delete(el); el.remove(); });
-      if (track.kind === Track.Kind.Video) setRemoteVideoTracks(items => items.filter(item => item.track !== track));
+      if (track.kind === Track.Kind.Video) setRemoteVideoTracks(items => items.filter(item => item.track.sid !== track.sid));
+    };
+    const onLocalTrackUnpublished = (publication) => {
+      if (publication.source === Track.Source.Microphone) setMicOn(false);
+    };
+    const onLocalPermissionsChanged = (_previous, participant) => {
+      if (participant.identity !== room.localParticipant.identity) return;
+      if (participant.permissions?.canPublish === false) {
+        setMicOn(false);
+        if (!micBusyRef.current) {
+          micBusyRef.current = true;
+          setMicBusy(true);
+          room.localParticipant.setMicrophoneEnabled(false)
+            .catch(() => {})
+            .finally(() => { micBusyRef.current = false; setMicBusy(false); });
+        }
+        setError('A direção encerrou sua fala. Quando receber autorização novamente, toque em “Ligar microfone”.');
+      } else if (participant.permissions?.canPublish === true && me !== 'director') {
+        setError('Microfone liberado pela direção. Toque em “Ligar microfone” para voltar a falar.');
+      }
     };
     room.on(RoomEvent.TrackSubscribed, onTrack);
     room.on(RoomEvent.TrackUnsubscribed, onUntrack);
+    room.on(RoomEvent.LocalTrackUnpublished, onLocalTrackUnpublished);
+    room.on(RoomEvent.ParticipantPermissionsChanged, onLocalPermissionsChanged);
     room.on(RoomEvent.Connected, ()=>setConnected(true));
-    room.on(RoomEvent.Disconnected, ()=>{setConnected(false);setMicOn(false);});
+    room.on(RoomEvent.Disconnected, ()=>{setConnected(false);setMicOn(false);setRemoteVideoTracks([]);});
     room.on(RoomEvent.Reconnecting, ()=>setConnected(false));
-    room.on(RoomEvent.Reconnected, ()=>setConnected(true));
+    room.on(RoomEvent.Reconnected, ()=>{setConnected(true);setMicOn(room.localParticipant.isMicrophoneEnabled);});
     room.connect(session.livekitUrl, session.livekitToken).then(()=>room.startAudio().catch(()=>{})).catch(e=>setError(`Áudio indisponível: ${e.message}`));
-    return ()=>{ room.removeAllListeners(); room.disconnect(); audioReturnMonitorRef.current?.pause(); if(audioReturnMonitorRef.current) audioReturnMonitorRef.current.srcObject=null; audioReturnMonitorRef.current=null; audioReturnTrackRef.current?.stop(); audioReturnTrackRef.current=null; attached.current.forEach(el=>el.remove()); attached.current.clear(); roomRef.current=null; };
+    return ()=>{ room.removeAllListeners(); room.disconnect(); setRemoteVideoTracks([]); audioReturnMonitorRef.current?.pause(); if(audioReturnMonitorRef.current) audioReturnMonitorRef.current.srcObject=null; audioReturnMonitorRef.current=null; audioReturnTrackRef.current?.stop(); audioReturnTrackRef.current=null; attached.current.forEach(el=>el.remove()); attached.current.clear(); roomRef.current=null; };
   }, [session?.livekitToken]);
 
   const login = async (e) => {
@@ -126,13 +150,23 @@ function App() {
   };
   const toggleMic = async () => {
     const room = roomRef.current;
-    if (!room) return;
+    if (!room || micBusyRef.current) return;
+    const enable = !room.localParticipant.isMicrophoneEnabled;
+    if (enable && room.localParticipant.permissions?.canPublish === false) {
+      setError('Aguarde a autorização da direção para ligar o microfone.');
+      return;
+    }
+    micBusyRef.current = true;
+    setMicBusy(true);
     setError('');
     try {
       await room.startAudio().catch(()=>{});
-      await room.localParticipant.setMicrophoneEnabled(!micOn, { echoCancellation:true, noiseSuppression:true, autoGainControl:true });
-      setMicOn(!micOn);
+      await room.localParticipant.setMicrophoneEnabled(enable, { echoCancellation:true, noiseSuppression:true, autoGainControl:true });
+      const actuallyEnabled = room.localParticipant.isMicrophoneEnabled;
+      setMicOn(actuallyEnabled);
+      if (actuallyEnabled !== enable) throw new Error(enable ? 'O LiveKit não confirmou a publicação do microfone. Aguarde a liberação e tente novamente.' : 'O microfone ainda aparece ativo. Tente desligá-lo novamente.');
     } catch (e) { setError(`Não foi possível acessar o microfone. Confira a permissão do navegador e o KZ: ${e.message}`); }
+    finally { micBusyRef.current = false; setMicBusy(false); }
   };
   const loadAudioInputs = async () => {
     setError('');
@@ -296,16 +330,16 @@ function App() {
   return <main className="app-shell"><header><div className="brand"><img className="brand-mark" src="/logo-pwo.png" alt="Pod PWO Podcast" /> PWO <span>INTERCOM</span></div><div className="user"><span className={'dot ' + (connected?'online':'')}></span><b>{myName}</b><span className="connection">{connected?'Conectado':'Conectando…'}</span><button className="quiet" onClick={()=>{roomRef.current?.disconnect();setSession(null);setConnected(false);}}>Sair</button></div></header>
     <div className="eventbar"><div><p className="eyebrow">CANAL DE OPERAÇÃO</p><h1>Fórmula Truck <span>•</span> Intercom</h1></div><span className="secure">ÁUDIO PRIVADO</span></div>
     {error&&<div className="alert" role="alert">{error}<button onClick={()=>setError('')}>Fechar</button></div>}
-    <section className="card status-card"><div><p className="eyebrow">SUA CONEXÃO</p><strong className="state-line"><span className={'dot ' + (connected?'online':'')}></span>{connected?'Conectado ao intercom':'Estabelecendo conexão…'}</strong><p className="muted">Mantenha esta página aberta e o celular desbloqueado durante a cobertura.</p></div><div className="actions"><button disabled={!connected} className={micOn?'danger':'primary'} onClick={toggleMic}>{micOn?'Desligar microfone':'Ligar microfone'}</button>{!isDirector&&me!=='producer'&&<button className="secondary" onClick={requestSpeak}>Solicitar fala</button>}</div></section>
+    <section className="card status-card"><div><p className="eyebrow">SUA CONEXÃO</p><strong className="state-line"><span className={'dot ' + (connected?'online':'')}></span>{connected?'Conectado ao intercom':'Estabelecendo conexão…'}</strong><p className="muted">Mantenha esta página aberta e o celular desbloqueado durante a cobertura.</p></div><div className="actions"><button disabled={!connected||micBusy} className={micOn?'danger':'primary'} onClick={toggleMic}>{micBusy?'Aguarde…':micOn?'Desligar microfone':'Ligar microfone'}</button>{!isDirector&&me!=='producer'&&<button className="secondary" onClick={requestSpeak}>Solicitar fala</button>}</div></section>
     {isDirector?<div className="director-workspace"><nav className="director-sidebar" aria-label="Painel do Diretor"><p className="eyebrow">DIREÇÃO</p><button className={directorTab==='general'?'active':''} onClick={()=>setDirectorTab('general')}>Geral</button><button className={directorTab==='obs'?'active':''} onClick={()=>setDirectorTab('obs')}>OBS Studio</button><button className={directorTab==='volumes'?'active':''} onClick={()=>setDirectorTab('volumes')}>Volumes de retorno</button><button className={directorTab==='talk'?'active':''} onClick={()=>setDirectorTab('talk')}>Fala</button></nav><div className="director-panel">
-      {directorTab==='general'&&<><section className="card"><div className="section-head"><div><p className="eyebrow">VOZ DO DIRETOR</p><h2>Quem recebe sua fala</h2></div><span className="tag">Canal privado</span></div><div className="recipient-list">{people.map(p=><label className="recipient" key={p.id}><div><b>{p.label}</b><small>{roster.get(p.id)?.connected?'Online':'Aguardando conexão'}</small></div><input type="checkbox" checked={state.routing.includes(p.id)} onChange={e=>setRecipient(p.id,e.target.checked)}/></label>)}</div><p className="hint">Escolha os celulares que recebem a voz do Diretor.</p><div className="director-mic"><span>Microfone do Diretor</span><button disabled={!connected} className={micOn?'danger small':'primary small'} onClick={toggleMic}>{micOn?'Desligar microfone':'Ligar microfone'}</button></div></section>
+      {directorTab==='general'&&<><section className="card"><div className="section-head"><div><p className="eyebrow">VOZ DO DIRETOR</p><h2>Quem recebe sua fala</h2></div><span className="tag">Canal privado</span></div><div className="recipient-list">{people.map(p=><label className="recipient" key={p.id}><div><b>{p.label}</b><small>{roster.get(p.id)?.connected?'Online':'Aguardando conexão'}</small></div><input type="checkbox" checked={state.routing.includes(p.id)} onChange={e=>setRecipient(p.id,e.target.checked)}/></label>)}</div><p className="hint">Escolha os celulares que recebem a voz do Diretor.</p><div className="director-mic"><span>Microfone do Diretor</span><button disabled={!connected||micBusy} className={micOn?'danger small':'primary small'} onClick={toggleMic}>{micBusy?'Aguarde…':micOn?'Desligar microfone':'Ligar microfone'}</button></div></section>
       <section className="card"><div className="section-head"><div><p className="eyebrow">RETORNO VISUAL</p><h2>Vídeo do OBS para a equipe</h2></div><span className={'tag ' + (videoOn?'obs-online':'')}>{videoOn?'ENVIANDO':'DESLIGADO'}</span></div><p className="muted">No OBS, inicie a Câmera Virtual e escolha a saída Programa. O retorno envia somente imagem.</p><div className="video-controls"><button className="secondary small" onClick={loadVideoDevices} disabled={videoBusy}>{videoBusy?'Buscando…':'Buscar fontes de vídeo'}</button><label>Fonte<select value={selectedVideoDevice} onChange={e=>setSelectedVideoDevice(e.target.value)} disabled={!videoDevices.length||videoOn}>{videoDevices.map((d,i)=><option key={d.deviceId} value={d.deviceId}>{d.label||('Câmera ' + (i+1))}</option>)}</select></label><button disabled={!connected||videoBusy||!selectedVideoDevice} className={videoOn?'danger':'primary'} onClick={toggleReturnVideo}>{videoBusy?'Aguarde…':videoOn?'Parar retorno de vídeo':'Iniciar retorno de vídeo'}</button></div>{videoOn&&localVideoTrack&&<div className="video-preview"><VideoTile track={localVideoTrack} name="Prévia local do OBS" muted/></div>}<div className="recipient-list video-recipients">{people.map(p=><label className="recipient" key={p.id}><div><b>{p.label}</b><small>{roster.get(p.id)?.connected?'Receber vídeo':'Offline'}</small></div><input type="checkbox" checked={(state.videoRouting||[]).includes(p.id)} onChange={e=>setVideoRecipient(p.id,e.target.checked)}/></label>)}</div><p className="hint">Selecione quem recebe a imagem. A senha e o áudio do intercom não são enviados no retorno de vídeo.</p></section><section className="card"><div className="section-head"><div><p className="eyebrow">VOLUME RÁPIDO</p><h2>Retorno da equipe</h2></div><button className="quiet" onClick={()=>setDirectorTab('volumes')}>Abrir ajustes</button></div>{volumeControls(true)}</section></>}
       {directorTab==='obs'&&obsPanel}
       {directorTab==='obs'&&<section className="card audio-return"><div className="section-head"><div><p className="eyebrow">RETORNO DE ÁUDIO</p><h2>Áudio da transmissão para a equipe</h2></div><span className={'tag ' + (audioReturnOn?'obs-online':'')}>{audioReturnOn?'ENVIANDO':'DESLIGADO'}</span></div><p className="muted">Escolha a entrada do cabo virtual para enviar o áudio do programa separado do intercom.</p><div className="audio-return-controls"><button className="secondary small" onClick={loadAudioInputs} disabled={audioReturnBusy||audioReturnOn}>{audioReturnBusy?'Buscando…':'Buscar fontes de áudio'}</button><label>Entrada do cabo virtual<select value={selectedAudioInput} onChange={e=>setSelectedAudioInput(e.target.value)} disabled={!audioInputs.length||audioReturnOn}><option value="">Selecione a entrada de áudio</option>{audioInputs.map((d,i)=><option key={d.deviceId} value={d.deviceId}>{d.label||`Entrada de áudio ${i+1}`}</option>)}</select></label><button disabled={!connected||audioReturnBusy||(!audioReturnOn&&!selectedAudioInput)} className={audioReturnOn?'danger':'primary'} onClick={toggleAudioReturn}>{audioReturnBusy?'Aguarde…':audioReturnOn?'Parar retorno de áudio':'Iniciar retorno de áudio'}</button></div>{audioReturnOn&&<label className="audio-return-monitor"><input type="checkbox" checked={monitorAudioReturn} onChange={e=>toggleLocalAudioMonitor(e.target.checked)}/> Ouvir o retorno neste computador <small>Ative somente com fones. Se o OBS captar o áudio do computador, mantenha esta opção desligada para evitar retorno à live.</small></label>}<div className="recipient-list">{people.map(p=><label className="recipient" key={p.id}><div><b>{p.label}</b><small>{roster.get(p.id)?.connected?'Online':'Offline'}</small></div><input type="checkbox" checked={(state.audioReturnRouting||[]).includes(p.id)} onChange={e=>setAudioReturnRecipient(p.id,e.target.checked)}/></label>)}</div><p className="hint">No OBS, monitore as fontes desejadas para CABLE Input. O navegador seleciona CABLE Output. Use fones para evitar eco.</p></section>}
       {directorTab==='volumes'&&<section className="card"><p className="eyebrow">MONITOR DE ÁUDIO</p><h2>Volume por pessoa</h2><p className="muted">Estes níveis ajustam somente o que você ouve no computador do Diretor.</p>{volumeControls()}<button className="secondary small" onClick={()=>setVolumeValues({interviewer1:1,interviewer2:1,producer:1})}>Restaurar volumes</button></section>}
       {directorTab==='talk'&&talkPanel}
     </div></div>
-    :<div className="grid"><section className="card"><p className="eyebrow">ESTADO DA FALA</p><h2>{me==='producer'?'Canal da produção':roster.get(me)?.canPublish?'Você está autorizado a falar':'Aguardando autorização'}</h2><p className="muted">{me==='producer'?'O microfone da produção fica disponível para a direção.':roster.get(me)?.canPublish?'Ligue o microfone quando receber a deixa.':'O Diretor libera seu microfone quando for sua vez.'}</p><div className={'permission ' + (roster.get(me)?.canPublish?'allowed':'')}>{roster.get(me)?.canPublish?'MICROFONE DISPONÍVEL':'SOMENTE ESCUTA'}</div></section><section className="card"><p className="eyebrow">RETORNO DO PROGRAMA</p><h2>Vídeo da transmissão</h2>{remoteVideoTracks.length?remoteVideoTracks.map(item=><VideoTile key={item.track.sid} track={item.track} name="Programa OBS"/>):<p className="muted">Aguardando o Diretor iniciar o retorno de vídeo.</p>}</section><section className="card"><p className="eyebrow">EQUIPE CONECTADA</p><h2>Participantes</h2>{profiles.map(p=><div className="roster-row" key={p.id}><span className={'dot ' + (roster.get(p.id)?.connected?'online':'')}></span><span>{p.label}{p.id===me?' (você)':''}</span><small>{roster.get(p.id)?.connected?(roster.get(p.id)?.canPublish?'Autorizado':'Conectado'):'Offline'}</small></div>)}</section></div>}
+    :<div className="grid"><section className="card"><p className="eyebrow">ESTADO DA FALA</p><h2>{me==='producer'?'Canal da produção':roster.get(me)?.canPublish?'Você está autorizado a falar':'Aguardando autorização'}</h2><p className="muted">{me==='producer'?'O microfone da produção fica disponível para a direção.':roster.get(me)?.canPublish?'Ligue o microfone quando receber a deixa.':'O Diretor libera seu microfone quando for sua vez.'}</p><div className={'permission ' + (roster.get(me)?.canPublish?'allowed':'')}>{roster.get(me)?.canPublish?'MICROFONE DISPONÍVEL':'SOMENTE ESCUTA'}</div></section><section className="card"><p className="eyebrow">RETORNO DO PROGRAMA</p><h2>Vídeo da transmissão</h2>{remoteVideoTracks.length?remoteVideoTracks.map(item=><VideoTile key={item.key} track={item.track} name="Programa OBS"/>):<p className="muted">Aguardando o Diretor iniciar o retorno de vídeo.</p>}</section><section className="card"><p className="eyebrow">EQUIPE CONECTADA</p><h2>Participantes</h2>{profiles.map(p=><div className="roster-row" key={p.id}><span className={'dot ' + (roster.get(p.id)?.connected?'online':'')}></span><span>{p.label}{p.id===me?' (você)':''}</span><small>{roster.get(p.id)?.connected?(roster.get(p.id)?.canPublish?'Autorizado':'Conectado'):'Offline'}</small></div>)}</section></div>}
     {!isDirector&&<section className="card return-volume-card"><p className="eyebrow">RETORNO DE ÁUDIO</p><h2>Volume do programa</h2><p className="muted">Ajusta somente o áudio da transmissão, sem mudar o intercom.</p><label className="return-volume">Volume <input type="range" min="0" max="1" step="0.05" value={audioReturnVolume} onChange={e=>changeAudioReturnVolume(e.target.value)}/><b>{Math.round(audioReturnVolume*100)}%</b></label></section>}
     <footer>Intercom, vídeo e retorno de áudio são canais separados do áudio transmitido no OBS.</footer>
   </main>;

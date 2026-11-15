@@ -9,6 +9,7 @@ Aplicação web para direção, dois entrevistadores e produção. O áudio da e
 - Entrevistadores entram sem permissão de publicar áudio. A direção concede e encerra a permissão pelo servidor LiveKit.
 - Seleção dos celulares que recebem o áudio do diretor, aplicada às inscrições de áudio pelo servidor LiveKit.
 - Solicitação de fala, presença, reconexão e estado da autorização.
+- Estado do microfone sincronizado com revogação e restauração da autorização; faixas antigas do retorno de vídeo são removidas ao chegar uma nova.
 - Microfone com cancelamento de eco, redução de ruído e ganho automático do navegador.
 - Credencial de acesso LiveKit com validade curta. A chave secreta LiveKit fica somente no servidor.
 - Painel de Direção com abas Geral, OBS Studio, Volumes de retorno e Fala.
