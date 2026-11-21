@@ -1,0 +1,12 @@
+{
+  "id": "/",
+  "name": "PWO Intercom",
+  "short_name": "PWO",
+  "lang": "pt-BR",
+  "start_url": "/",
+  "scope": "/",
+  "display": "standalone",
+  "background_color": "#10151d",
+  "theme_color": "#10151d",
+  "icons": [{ "src": "/logo-pwo.png", "type": "image/png", "purpose": "any" }]
+}

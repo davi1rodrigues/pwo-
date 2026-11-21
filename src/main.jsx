@@ -5,12 +5,14 @@ import { people, profiles, interviewers, PROGRAM_TRACK, PROGRAM_VIDEO } from '..
 import { audioContext, unlockAudio } from './audio.js';
 import './style.css';
 
+const defaultApi = import.meta.env.VITE_API_BASE_URL || (window.Capacitor?.isNativePlatform?.() ? 'https://pwo-esr1.onrender.com' : '');
+
 async function api(path, token, body) {
-  const base = (localStorage.getItem('pwoApiBaseUrl') || import.meta.env.VITE_API_BASE_URL || '').replace(/\/+$/, '');
+  const base = (localStorage.getItem('pwoApiBaseUrl') || defaultApi).replace(/\/+$/, '');
   const response = await fetch(`${base}/api/${path}`, {
     method: body === undefined ? 'GET' : 'POST',
     headers: { ...(token ? { Authorization: `Bearer ${token}` } : {}), ...(body === undefined ? {} : { 'Content-Type': 'application/json' }) },
-    body: body === undefined ? undefined : JSON.stringify(body), signal: AbortSignal.timeout(10000),
+    body: body === undefined ? undefined : JSON.stringify(body), signal: AbortSignal.timeout(path === 'session' ? 75000 : 10000),
   });
   const data = await response.json().catch(() => ({}));
   if (!response.ok) throw new Error(data.error || 'Falha de comunicação com o servidor.');
@@ -55,7 +57,7 @@ function Volume({ label, value, onChange }) {
 }
 function App() {
   const [session, setSession] = useState(null);
-  const [apiBase, setApiBase] = useState(() => localStorage.getItem('pwoApiBaseUrl') || import.meta.env.VITE_API_BASE_URL || '');
+  const [apiBase, setApiBase] = useState(() => localStorage.getItem('pwoApiBaseUrl') || defaultApi);
   const [profile, setProfile] = useState('director'), [code, setCode] = useState('');
   const [error, setError] = useState(''), [syncError, setSyncError] = useState('');
   const [busy, setBusy] = useState(false), [actionBusy, setActionBusy] = useState(false);

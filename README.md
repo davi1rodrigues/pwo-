@@ -20,7 +20,15 @@ No servidor HTTPS existente, preserve os valores reais de `LIVEKIT_URL`, `LIVEKI
 
 Depois de atualizar o código e reiniciar a API, saia e entre novamente em todos os aparelhos. A nova interface e o novo servidor precisam ser publicados juntos. A versão anterior do APK também precisa ser recompilada para receber a interface nova.
 
-No navegador, abra o mesmo endereço HTTPS nos quatro aparelhos e deixe o campo Servidor vazio. No APK, preencha esse campo com o endereço HTTPS da API. No desktop, o campo também permite selecionar essa API central. Use o código correspondente ao perfil. Uma identidade só pode ficar ativa em um aparelho por vez.
+Endereço oficial: https://pwo-esr1.onrender.com/. No navegador, abra esse endereço nos quatro aparelhos e deixe o campo Servidor vazio. O APK 1.1.0 já sugere essa API. O desktop 1.1.0 abre diretamente esse site e não inicia mais um servidor próprio nem precisa das chaves LiveKit. Use o código correspondente ao perfil. Uma identidade só pode ficar ativa em um aparelho por vez.
+
+## Instalação e iPhone
+
+- Windows: instalar `PWO-Intercom-Setup-1.1.0.exe`. Depois desta instalação, a interface vem do servidor ao abrir o aplicativo; futuras mudanças do executável ainda exigirão instalador.
+- Android: instalar o novo APK 1.1.0. O aplicativo Android continua com interface empacotada, portanto exige novo APK para alterações da interface.
+- iPhone: abrir a URL oficial no Safari, usar Compartilhar → Adicionar à Tela de Início e, quando disponível, Abrir como App Web. Esta é a versão web instalada, requer internet e não é um aplicativo TestFlight/App Store.
+- A versão nativa de iPhone ainda depende de compilação em macOS/Xcode e assinatura Apple para distribuição. Não há IPA assinada nesta entrega.
+- O servidor gratuito pode levar mais de 50 segundos para despertar. O login aguarda até 75 segundos; abra o site antes de iniciar a operação.
 
 ## Teste local no VS Code
 
