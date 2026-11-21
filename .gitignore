@@ -1,6 +1,8 @@
 node_modules/
 dist/
-release/
 .env
 .env.*
 !.env.example
+release/
+.build-cache/
+.delivery-tools-*/

@@ -24,7 +24,7 @@ Endereço oficial: https://pwo-esr1.onrender.com/. No navegador, abra esse ender
 
 ## Instalação e iPhone
 
-- Windows: instalar `PWO-Intercom-Setup-1.1.0.exe`. Depois desta instalação, a interface vem do servidor ao abrir o aplicativo; futuras mudanças do executável ainda exigirão instalador.
+- Windows: extrair `PWO-Intercom-Windows-1.1.0.zip` e abrir `PWO Intercom.exe` dentro da pasta extraída. O aplicativo foi empacotado, mas a geração do instalador NSIS foi bloqueada neste ambiente. A interface vem do servidor ao abrir; futuras mudanças do executável ainda exigirão um novo pacote.
 - Android: instalar o novo APK 1.1.0. O aplicativo Android continua com interface empacotada, portanto exige novo APK para alterações da interface.
 - iPhone: abrir a URL oficial no Safari, usar Compartilhar → Adicionar à Tela de Início e, quando disponível, Abrir como App Web. Esta é a versão web instalada, requer internet e não é um aplicativo TestFlight/App Store.
 - A versão nativa de iPhone ainda depende de compilação em macOS/Xcode e assinatura Apple para distribuição. Não há IPA assinada nesta entrega.
@@ -107,6 +107,6 @@ Objetivo: simular a operação por pelo menos uma hora, com os equipamentos e a 
 - A seleção de destinatários combina assinaturas no servidor e permissões de faixas nos clientes oficiais; não substitui autenticação nominal nem é uma proteção contra um emissor autorizado que modifique o cliente.
 - O navegador pode interromper áudio em segundo plano ou com tela bloqueada. Use primeiro plano, tela ligada, fones e alimentação adequada.
 - O medidor verifica amostras de áudio, não comprova que o fone está reproduzindo.
-- Testes automatizados e build web foram executados. Nenhum ensaio físico com os dois computadores e os celulares foi concluído nesta alteração.
+- Oito testes automatizados e build web passaram. A versão web 1.1.0 foi publicada no Render e o login Estação OBS conectou ao LiveKit. APK 1.1.0 compilado com a mesma assinatura de teste do APK 1.0.1; desktop empacotado em ZIP. Os pacotes ainda precisam ser abertos nos aparelhos de destino. Nenhum ensaio físico com os dois computadores e os celulares foi concluído nesta alteração.
 
 Referências de configuração: [OBS — monitoramento e cabo virtual](https://obsproject.com/kb/video-call-streaming-tutorial/) e [LiveKit — reprodução de áudio](https://docs.livekit.io/reference/client-sdk-js/).
